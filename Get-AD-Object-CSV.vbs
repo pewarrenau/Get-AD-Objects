@@ -22,21 +22,21 @@ Const defaultType = "3"			'User
 'Const defaultScope = "1"		'Target OU only
 Const defaultScope = "2"		'Target OU and all child OUs
 
-Dim delimiter:	delimiter = chr(9)	' Tab
-'Dim delimiter:	delimiter = chr(44)	' Comma
+Dim delimiter:		delimiter = chr(9)	' Tab
+'Dim delimiter:		delimiter = chr(44)	' Comma
+
+Dim DOUBLE_QUOTE:	DOUBLE_QUOTE = chr(34)
+
 '********************************************************************
 
 
 '********************************************************************
 '* Returns the FQDN of the currently logged in user !!!! NEED TO TEST AGAINST LOCAL ACCOUNT
 '********************************************************************
-Dim objSysInfo
-Set objSysInfo = Createobject("ADSystemInfo")
-Dim strDefaultOU
-strDefaultOU = split(objSysInfo.UserName,",",2)(1)
+Dim objSysInfo:		Set objSysInfo = Createobject("ADSystemInfo")
+Dim strDefaultOU:	strDefaultOU = split(objSysInfo.UserName,",",2)(1)
 
 'Wscript.Echo "The variable xxx is a : " & VarType(xxx)
-
 
 '********************************************************************
 '* Declare Global Constants
@@ -84,35 +84,16 @@ Const ADS_UF_SECURITY_GROUP = &H80000000
 Dim strDN
 Dim strScope
 Dim strType
-Dim oRootDSE
+'Dim oRootDSE
 
 Dim objLogFile
 
-'Dim dicUserAccountControls
-'Set dicUserAccountControls = CreateObject("Scripting.Dictionary")
-'dicUserAccountControls.Add "ADS_UF_SCRIPT", &H1
-'dicUserAccountControls.Add "ADS_UF_ACCOUNTDISABLE", &H2
-'dicUserAccountControls.Add "ADS_UF_HOMEDIR_REQUIRED", &H8
-'dicUserAccountControls.Add "ADS_UF_LOCKOUT", &H10
-'dicUserAccountControls.Add "ADS_UF_PASSWD_NOTREQD", &H20
-'dicUserAccountControls.Add "ADS_UF_PASSWD_CANT_CHANGE", &H40
-'dicUserAccountControls.Add "ADS_UF_ENCRYPTED_TEXT_PWD_ALLOWED", &H80
-'dicUserAccountControls.Add "ADS_UF_TEMP_DUPLICATE_ACCOUNT", &H100
-'dicUserAccountControls.Add "ADS_UF_NORMAL_ACCOUNT", &H200
-'dicUserAccountControls.Add "ADS_UF_INTERDOMAIN_TRUST_ACCOUNT", &H800
-
-
-
-
-
 '********************************************************************
 '* TBC
-dim listAttributes
-Set listAttributes = CreateObject("System.Collections.ArrayList")
+dim listAttributes:		Set listAttributes = CreateObject("System.Collections.ArrayList")
 
 '********* Attribute of: Computer, Group, and User *********
 listAttributes.Add "distinguishedName"
-listAttributes.Add "ou"
 listAttributes.Add "cn"
 listAttributes.Add "whenCreated"
 listAttributes.Add "whenChanged"
@@ -166,22 +147,19 @@ listAttributes.Add "HomeMTA"
 '********************************************************************
 '* Function: TBC   !!!!!!!!!!!!!!!!
 '* Purpose: 
-'* Input:	
+'* Input:	objParent	-	
 '* Output:  
 '* Notes:  
 '*
 Sub writeLog(objParent, strDescription)
-	Dim objAttributeValue
-	Dim tempString
-
 	On Error Resume Next
-	objAttributeValue = objParent.get(strDescription)
-
+	Dim objAttributeValue:		objAttributeValue = objParent.get(strDescription)
+	
 	If Err.Number = 0 Then
+		Dim tempString
 		tempString = Replace(objAttributeValue, chr(10), "")
 		tempString = Replace(tempString , chr(13), "")
-		objLogFile.Write chr(34) & tempString & chr(34) & delimiter
-		
+		objLogFile.Write DOUBLE_QUOTE & tempString & DOUBLE_QUOTE & delimiter
 	Else
 		objLogFile.Write delimiter
 		Err.Clear
@@ -190,13 +168,24 @@ Sub writeLog(objParent, strDescription)
 End Sub
 
 
+'********************************************************************
+'* Function:	writeLogElement(valueToWrite)
+'* Purpose:		Helper function to write a data element to the log file. The value/element is written within double quotes and terminated by the delimiter character.
+'* Input:		valueToWrite	-	The data element to be write to the logfile (aka cell)
+'* Output:
+'* Notes:
+'*
+Function writeLogElement(valueToWrite)
+	objLogFile.Write DOUBLE_QUOTE & valueToWrite & DOUBLE_QUOTE & delimiter
+End Function
+'********************************************************************
 
 
 '********************************************************************
 '* Function: ExtractCommon_OpenLDAP(strDN, strFilter)
 '* Purpose: 
-'* Input:   strDN		:	Distinguished Name as a string
-'*			strFilter	:	Object type to be filtered on as a string (e.g. Computer, Group, or User)
+'* Input:   strDN		-	Distinguished Name as a string
+'*			strFilter	-	Object type to be filtered on as a string (e.g. Computer, Group, or User)
 '* Output:  Object
 '* Notes:  
 '*
@@ -210,8 +199,9 @@ End Function
 '********************************************************************
 '* Function: hexCompare(objAttribute, ObjComparator)
 '* Purpose: 
-'* Input:
-'* Output:
+'* Input:	objAttribute	-	The attribute of an object to compare against
+'* 			ObjComparator	-	The value to compare with
+'* Output:	Boolean
 '* Notes:  Try using Case to improve speed
 '*
 Function hexCompare(objAttribute, ObjComparator)
@@ -226,6 +216,7 @@ Function hexCompare(objAttribute, ObjComparator)
 	End if
 End Function
 '********************************************************************
+
 
 
 '********************************************************************
@@ -249,14 +240,14 @@ End Function
 '* Notes:  
 '*
 Function ExtractCommon_Integer8ToInteger(ByVal objInteger8)
-	Dim intInteger8
-	Dim intHighPart:intHighPart = objInteger8.HighPart
-	Dim intLowPart:intLowPart = objInteger8.LowPart
+	Dim intHighPart:	intHighPart = objInteger8.HighPart
+	Dim intLowPart:		intLowPart = objInteger8.LowPart
 	
 	If (intLowPart < 0) Then
 		intHighPart = intHighPart + 1
 	End If
 	
+	Dim intInteger8
 	intInteger8 = intHighPart * (2^32) + intLowPart 
 	intInteger8 = intInteger8 / (60 * 10000000)
 	intInteger8 = intInteger8 / 1440
@@ -274,11 +265,10 @@ End Function
 '*
 Sub ExtractObject_ExportRecursive (ByVal strZoneOU)
 	Dim objZoneOU
-	Dim objZoneChildOU
-	
 	Set objZoneOU = ExtractCommon_OpenLDAP(strZoneOU, "organizationalUnit")
 	ExtractObject_ExportSite(objZoneOU.distinguishedName)
 	
+	Dim objZoneChildOU
 	For Each objZoneChildOU In objZoneOU
 		ExtractObject_ExportRecursive (objZoneChildOU.distinguishedName)
 	Next
@@ -295,129 +285,97 @@ End Sub
 '* Notes:  
 '*
 Sub ExtractObject_ExportSite (ByVal strSiteOU)
-	Dim objSiteOU
+	Dim objSiteOU:		Set objSiteOU = ExtractCommon_OpenLDAP(strSiteOU, strType)
 	Dim objSiteChild
+	Dim intLinesWritten:	intLinesWritten = 0
 
-	Dim strAccountType
-	
-	Dim dblLastLogonTimestamp
-	Dim dblLockoutTime
-	Dim dblPwdLastSet
-	Dim lngDateDiffCheck
-	Dim dtmPwdLastSet
-
-	Dim strMyElements
-	Dim intLinesWritten
-	
-	intLinesWritten = 0
-	
-'	Dim intWhenCreated
-'	Dim memberCounter
-'	Dim memberOfCounter
-'	Dim objMember
-'	Dim objMemberOf
-'	Dim colMembers
-'	Dim sGroupMember
-'	Dim colMembersOf
-'	Dim sGroupMemberOf
-
-
-	Set objSiteOU = ExtractCommon_OpenLDAP(strSiteOU, strType)
 	For Each objSiteChild In objSiteOU
 		intLinesWritten = intLinesWritten + 1
-'		objLogFile.Write chr(34) & intLinesWritten & chr(34) & delimiter
-		strAccountType = objSiteChild.class
+		Dim strAccountType:		strAccountType = objSiteChild.class
+
 		If strType <> strAccountType Then
 			Exit For
 		End If
-
+		writeLogElement(split(objSiteChild.distinguishedName,",",2)(1))		'* splits out the OU component of the DN and writes the element to the logfile.
+		
+		Dim strMyElements
 		For Each strMyElements In listAttributes
 			Call writeLog(objSiteChild, strMyElements)
 		Next
 
 		'********************************************************************
 		'* Doing stuff with passwords
-
 		If isEmpty(objSiteChild.pwdLastSet) = FALSE Then
-			dblPwdLastSet = ExtractCommon_Integer8ToInteger(objSiteChild.pwdLastSet)
-			dtmPwdLastSet = ExtractCommon_IntegerToDate(dblPwdLastSet)
-			lngDateDiffCheck = DateDiff("d",dtmPwdLastSet,Now)
+			Dim dblPwdLastSet:		dblPwdLastSet = ExtractCommon_Integer8ToInteger(objSiteChild.pwdLastSet)
+			Dim dtmPwdLastSet:		dtmPwdLastSet = ExtractCommon_IntegerToDate(dblPwdLastSet)
+			Dim lngDateDiffCheck:	lngDateDiffCheck = DateDiff("d",dtmPwdLastSet,Now)
 
-
-			
 			If dblPwdLastSet = 0 Then
-				objLogFile.Write chr(34) & "0" & chr(34) & delimiter
-				objLogFile.Write chr(34) & "TRUE" & chr(34) & delimiter
+				writeLogElement("0")
+				writeLogElement("TRUE")
 			Else
-				objLogFile.Write chr(34) & dtmPwdLastSet & chr(34) & delimiter
-				objLogFile.Write chr(34) & "FALSE" & chr(34) & delimiter
+				writeLogElement(dtmPwdLastSet)
+				writeLogElement("FALSE")
 			End if
 		Else
-			objLogFile.Write chr(34) & "isEmpty," & chr(34) & "isEmpty,"
+				writeLogElement("isEmpty")
 		End if
 
 
 		'********************************************************************
 		'*lastLogonTimestamp
 		If IsEmpty(objSiteChild.lastLogonTimestamp) = FALSE Then
-			dblLastLogonTimestamp = ExtractCommon_Integer8ToInteger(objSiteChild.lastLogonTimestamp)
+			Dim dblLastLogonTimestamp:		dblLastLogonTimestamp = ExtractCommon_Integer8ToInteger(objSiteChild.lastLogonTimestamp)
 			If dblLastLogonTimestamp = 0 Then
-				objLogFile.Write chr(34) & "0" & chr(34) & delimiter
+				writeLogElement("0")
 			Else
-				objLogFile.Write chr(34) & ExtractCommon_IntegerToDate(dblLastLogonTimestamp) & chr(34) & delimiter
+				writeLogElement(ExtractCommon_IntegerToDate(dblLastLogonTimestamp))
 			End if
 		Else
-			objLogFile.Write chr(34) & "isEmpty" & chr(34) & delimiter
+				writeLogElement("isEmpty")
 		End if
-
-
 
 
 		'********************************************************************
 		'*lockoutTime
 		If IsEmpty(objSiteChild.lockoutTime) = FALSE Then
-			dblLockoutTime = ExtractCommon_Integer8ToInteger(objSiteChild.lockoutTime)
+			Dim dblLockoutTime:		dblLockoutTime = ExtractCommon_Integer8ToInteger(objSiteChild.lockoutTime)
 			If dblLockoutTime = 0 Then
-				objLogFile.Write chr(34) & "0" & chr(34) & delimiter
+				writeLogElement("0")
 			Else
-				objLogFile.Write chr(34) & ExtractCommon_IntegerToDate(dblLockoutTime) & chr(34) & delimiter
+					writeLogElement(ExtractCommon_IntegerToDate(dblLockoutTime))
 			End if
 		Else
-			objLogFile.Write chr(34) & "isEmpty" & chr(34) & delimiter
+				writeLogElement("isEmpty")
 		End if
-
-
 
 		If isEmpty(objSiteChild.userAccountControl) = FALSE Then
-			objLogFile.Write chr(34) & objSiteChild.UserAccountControl & chr(34) & delimiter
-		
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_SCRIPT) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_ACCOUNTDISABLE) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_HOMEDIR_REQUIRED) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_PASSWD_NOTREQD) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_PASSWD_CANT_CHANGE) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_ENCRYPTED_TEXT_PWD_ALLOWED) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_TEMP_DUPLICATE_ACCOUNT) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_NORMAL_ACCOUNT) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_INTERDOMAIN_TRUST_ACCOUNT) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_WORKSTATION_TRUST_ACCOUNT) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_SERVER_TRUST_ACCOUNT) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_DONT_EXPIRE_PASSWD) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_MNS_LOGON_ACCOUNT) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_SMARTCARD_REQUIRED) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_TRUSTED_FOR_DELEGATION) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_NOT_DELEGATED) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_USE_DES_KEY_ONLY) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_DONT_REQ_PREAUTH) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_PASSWORD_EXPIRED) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_TRUSTED_TO_AUTH_FOR_DELEGATION) & chr(34) & delimiter
-			objLogFile.Write chr(34) & hexCompare(objSiteChild.userAccountControl, ADS_UF_PARTIAL_SECRETS_ACCOUNT) & chr(34) & delimiter
-			'********************************************************************
+			writeLogElement(objSiteChild.UserAccountControl)
+
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_SCRIPT))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_ACCOUNTDISABLE))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_HOMEDIR_REQUIRED))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_PASSWD_NOTREQD))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_PASSWD_CANT_CHANGE))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_ENCRYPTED_TEXT_PWD_ALLOWED))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_TEMP_DUPLICATE_ACCOUNT))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_NORMAL_ACCOUNT))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_INTERDOMAIN_TRUST_ACCOUNT))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_WORKSTATION_TRUST_ACCOUNT))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_SERVER_TRUST_ACCOUNT))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_DONT_EXPIRE_PASSWD))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_MNS_LOGON_ACCOUNT))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_SMARTCARD_REQUIRED))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_TRUSTED_FOR_DELEGATION))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_NOT_DELEGATED))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_USE_DES_KEY_ONLY))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_DONT_REQ_PREAUTH))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_PASSWORD_EXPIRED))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_TRUSTED_TO_AUTH_FOR_DELEGATION))
+			writeLogElement(hexCompare(objSiteChild.userAccountControl, ADS_UF_PARTIAL_SECRETS_ACCOUNT))
+
 		End if
-
-
 		objLogFile.Writeline
-
 	Next
 End Sub
 
@@ -431,37 +389,23 @@ End Sub
 '*
 '********************************************************************
 Sub Main()
+	'********************************************************************
+	'* startTime variable captures time the script started execution. This will be used later to calculate the execute duration of the script.
+	Dim startTime:	startTime = Now
+	Dim stopTime
+	Dim elapsedTime
 
-'* Variables used to calculate execute time of script
-Dim startTime:	startTime = Now
-Dim stopTime
-Dim elapsedTime
+	'********************************************************************
+	Dim objArgs:	Set objArgs = WScript.Arguments
 
+	'********************************************************************
+	'* InputBox to select object type to be extracted from AD. Includes input validation
+	'*
+	If WScript.Arguments.Count = 3 Then
+		strType = objArgs(0)
+		strScope = objArgs(1)
+		strDN = objArgs(2)
 
-'********************************************************************
-Dim objArgs
-Set objArgs = WScript.Arguments
-
-
-'********************************************************************
-'* InputBox to select object type to be extracted from AD. Includes input validation
-'*
-If WScript.Arguments.Count = 3 Then
-	strType = objArgs(0)
-	strScope = objArgs(1)
-	strDN = objArgs(2)
-
-	Select Case strType
-	Case "1"
-		strType = ADS_OBJ_TYPE_COMPUTER
-	Case "2"
-		strType = ADS_OBJ_TYPE_GROUP
-	Case "3"
-		strType = ADS_OBJ_TYPE_USER
-	End Select
-	
-Else
-	strType = InputBox("Enter the type object to extract from Active Directory Computer[1], Group[2], or User[3] ","Input Object Type",defaultType)
 		Select Case strType
 		Case "1"
 			strType = ADS_OBJ_TYPE_COMPUTER
@@ -469,97 +413,102 @@ Else
 			strType = ADS_OBJ_TYPE_GROUP
 		Case "3"
 			strType = ADS_OBJ_TYPE_USER
+		Case Else
+			Wscript.Echo "ERROR: "& strType & " is not a valid option."
+			Wscript.Quit
 		End Select
+		
+	Else
+		strType = InputBox("Enter the type object to extract from Active Directory Computer[1], Group[2], or User[3] ","Input Object Type",defaultType)
+			Select Case strType
+			Case "1"
+				strType = ADS_OBJ_TYPE_COMPUTER
+			Case "2"
+				strType = ADS_OBJ_TYPE_GROUP
+			Case "3"
+				strType = ADS_OBJ_TYPE_USER
+			Case Else
+				Wscript.Echo "ERROR: "& strType & " is not a valid option."
+				Wscript.Quit
+			End Select
 
-	'* InputBox to select mode of operation. Extract data from: Single OU or Recursively 
-	strScope = InputBox("Enter the mode of operation. Single OU Only  [1] or additionally query child OU [2]","Input Scope",defaultScope)
+		'* InputBox to select mode of operation. Extract data from: Single OU or Recursively 
+		strScope = InputBox("Enter the mode of operation. Single OU Only  [1] or additionally query child OU [2]","Input Scope",defaultScope)
 
-	'* InputBox to select the DN of the target OU
-	strDN = InputBox("Enter the distinguished name of a Site container","Input Site OU",strDefaultOU)
+		'* InputBox to select the DN of the target OU
+		strDN = InputBox("Enter the distinguished name of a Site container","Input Site OU",strDefaultOU)
 
-End If
-'********************************************************************
-
-
-
-
-'********************************************************************
-'* Setup Filesystem access
-Dim OutputFile
-Dim objFSO 
-Dim element
-
-
-OutputFile = "AD_" & strType & "_" & Day(Now) & MonthName(Month(Now),True) & Year(Now) & ".csv"
-Set objFSO = CreateObject("Scripting.FileSystemObject")
-Set objLogFile = objFSO.CreateTextFile(OutputFile , ForWriting, True)
-
-For Each element In listAttributes
-	objLogFile.Write chr(34) & element & chr(34) & delimiter
-Next
-
-objLogFile.Write chr(34) & "PasswordLastSet" & chr(34) & delimiter
-objLogFile.Write chr(34) & "MustChangePasswordNextLogin" & chr(34) & delimiter
-objLogFile.Write chr(34) & "LastLogonTimestampGMT" & chr(34) & delimiter
-objLogFile.Write chr(34) & "LockoutTime" & chr(34) & delimiter
-objLogFile.Write chr(34) & "UserAccountControl" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_SCRIPT" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_ACCOUNTDISABLE" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_HOMEDIR_REQUIRED" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_PASSWD_NOTREQD" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_PASSWD_CANT_CHANGE" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_ENCRYPTED_TEXT_PWD_ALLOWED" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_TEMP_DUPLICATE_ACCOUNT" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_NORMAL_ACCOUNT" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_INTERDOMAIN_TRUST_ACCOUNT" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_WORKSTATION_TRUST_ACCOUNT" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_SERVER_TRUST_ACCOUNT" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_DONT_EXPIRE_PASSWD" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_MNS_LOGON_ACCOUNT" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_SMARTCARD_REQUIRED" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_TRUSTED_FOR_DELEGATION" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_NOT_DELEGATED" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_USE_DES_KEY_ONLY" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_DONT_REQ_PREAUTH" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_PASSWORD_EXPIRED" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_TRUSTED_TO_AUTH_FOR_DELEGATION" & chr(34) & delimiter
-objLogFile.Write chr(34) & "ADS_UF_PARTIAL_SECRETS_ACCOUNT" & chr(34) & delimiter
-objLogFile.Writeline
-'********************************************************************
-
-
-'********************************************************************
-'* Execute either Active Directory extract in either single or recursive mode
-'*
-Select Case strScope
-	Case "1"
-		ExtractObject_ExportSite(strDN)
-	Case "2"
-		ExtractObject_ExportRecursive(strDN)
-	End Select
-'********************************************************************
-
-
-'********************************************************************
-'* Setup variables to calculate time taken to execute script
-'*
-stopTime = Now
-elapsedTime = DateDiff("s",startTime,stopTime)
-'********************************************************************
+	End If
+	'********************************************************************
 
 
 
 
+	'********************************************************************
+	'* Setup Filesystem access
+	Dim OutputFile:		OutputFile = "AD_" & strType & "_" & Day(Now) & MonthName(Month(Now),True) & Year(Now) & ".csv"
+	Dim objFSO:			Set objFSO = CreateObject("Scripting.FileSystemObject")
+	Set objLogFile = objFSO.CreateTextFile(OutputFile , ForWriting, True)
+
+	'*	Write the header elements to the logfile
+	writeLogElement("ou")
+	Dim element
+	For Each element In listAttributes
+		writeLogElement(element)
+	Next
+	writeLogElement("PasswordLastSet")
+	writeLogElement("MustChangePasswordNextLogin")
+	writeLogElement("LastLogonTimestampGMT")
+	writeLogElement("LockoutTime")
+	writeLogElement("UserAccountControl")
+	writeLogElement("ADS_UF_SCRIPT")
+	writeLogElement("ADS_UF_ACCOUNTDISABLE")
+	writeLogElement("ADS_UF_HOMEDIR_REQUIRED")
+	writeLogElement("ADS_UF_PASSWD_NOTREQD")
+	writeLogElement("ADS_UF_PASSWD_CANT_CHANGE")
+	writeLogElement("ADS_UF_ENCRYPTED_TEXT_PWD_ALLOWED")
+	writeLogElement("ADS_UF_TEMP_DUPLICATE_ACCOUNT")
+	writeLogElement("ADS_UF_NORMAL_ACCOUNT")
+	writeLogElement("ADS_UF_INTERDOMAIN_TRUST_ACCOUNT")
+	writeLogElement("ADS_UF_WORKSTATION_TRUST_ACCOUNT")
+	writeLogElement("ADS_UF_SERVER_TRUST_ACCOUNT")
+	writeLogElement("ADS_UF_DONT_EXPIRE_PASSWD")
+	writeLogElement("ADS_UF_MNS_LOGON_ACCOUNT")
+	writeLogElement("ADS_UF_SMARTCARD_REQUIRED")
+	writeLogElement("ADS_UF_TRUSTED_FOR_DELEGATION")
+	writeLogElement("ADS_UF_NOT_DELEGATED")
+	writeLogElement("ADS_UF_USE_DES_KEY_ONLY")
+	writeLogElement("ADS_UF_DONT_REQ_PREAUTH")
+	writeLogElement("ADS_UF_PASSWORD_EXPIRED")
+	writeLogElement("ADS_UF_TRUSTED_TO_AUTH_FOR_DELEGATION")
+	writeLogElement("ADS_UF_PARTIAL_SECRETS_ACCOUNT")
+
+	objLogFile.Writeline
+	'********************************************************************
 
 
+	'********************************************************************
+	'* Execute either Active Directory extract in either single or recursive mode
+	'*
+	Select Case strScope
+		Case "1"
+			ExtractObject_ExportSite(strDN)
+		Case "2"
+			ExtractObject_ExportRecursive(strDN)
+		Case Else
+			Wscript.Echo "ERROR: "& strScope & " is not a valid option."
+			Wscript.Quit
+		End Select
+	'********************************************************************
 
 
-
-'********************************************************************
-objLogFile.Close
-Wscript.Echo "Script Completed in : " & elapsedTime & " seconds"
-
-
+	'********************************************************************
+	'* Setup variables to calculate time taken to execute script
+	'*
+	stopTime = Now
+	elapsedTime = DateDiff("s",startTime,stopTime)
+	objLogFile.Close
+	Wscript.Echo "Script Completed in : " & elapsedTime & " seconds"
 
 End Sub
 
@@ -570,11 +519,3 @@ Main
 '*                           End of File                            *
 '*                                                                  *
 '********************************************************************
-
-
-
-
-
-
-
-
